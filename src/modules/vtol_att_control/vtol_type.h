@@ -63,7 +63,8 @@ enum class mode {
 enum class vtol_type {
 	TAILSITTER = 0,
 	TILTROTOR,
-	STANDARD
+	STANDARD,
+	HELIGYRO
 };
 
 enum VtolForwardActuationMode {

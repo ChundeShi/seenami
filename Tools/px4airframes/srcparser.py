@@ -81,6 +81,8 @@ class AirframeGroup(object):
             return "VTOLQuadRotorTailSitter"
         elif (self.type == "VTOL Tiltrotor"):
             return "VTOLTiltRotor"
+        elif (self.type == "VTOL Heligyro"):
+            return "VTOLHeligyro"
         elif (self.type == "VTOL Octoplane"):
             return "VTOLPlaneOcto"
         elif (self.type == "Coaxial Helicopter"):

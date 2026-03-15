@@ -111,6 +111,7 @@ bool high_latency_data_link_lost # Set to true if the high latency data link (eg
 # VTOL flags
 bool is_vtol             # True if the system is VTOL capable
 bool is_vtol_tailsitter  # True if the system performs a 90° pitch down rotation during transition from MC to FW
+bool is_vtol_heligyro	  #  
 bool in_transition_mode  # True if VTOL is doing a transition
 bool in_transition_to_fw # True if VTOL is doing a transition from MC to FW
 

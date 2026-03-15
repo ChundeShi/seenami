@@ -87,6 +87,7 @@
 #include "standard.h"
 #include "tailsitter.h"
 #include "tiltrotor.h"
+#include "heligyro.h"
 #include "vtol_type.h"
 
 using namespace time_literals;

@@ -43,6 +43,7 @@ public:
 		msg_newer.high_latency_data_link_lost = msg_older.high_latency_data_link_lost;
 		msg_newer.is_vtol = msg_older.is_vtol;
 		msg_newer.is_vtol_tailsitter = msg_older.is_vtol_tailsitter;
+		msg_newer.is_vtol_heligyro = msg_older.is_vtol_heligyro;
 		msg_newer.in_transition_mode = msg_older.in_transition_mode;
 		msg_newer.in_transition_to_fw = msg_older.in_transition_to_fw;
 		msg_newer.system_type = msg_older.system_type;
@@ -86,6 +87,7 @@ public:
 		msg_older.high_latency_data_link_lost = msg_newer.high_latency_data_link_lost;
 		msg_older.is_vtol = msg_newer.is_vtol;
 		msg_older.is_vtol_tailsitter = msg_newer.is_vtol_tailsitter;
+		msg_older.is_vtol_heligyro = msg_newer.is_vtol_heligyro;
 		msg_older.in_transition_mode = msg_newer.in_transition_mode;
 		msg_older.in_transition_to_fw = msg_newer.in_transition_to_fw;
 		msg_older.system_type = msg_newer.system_type;

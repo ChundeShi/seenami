@@ -24,6 +24,14 @@
                 "externalConsole": false,
                 "setupCommands": [
                     {
+                        "text": "set pagination off",
+                        "ignoreFailures": true,
+                    },
+                    {
+                        "text": "set non-stop on",
+                        "ignoreFailures": true,
+                    },
+                    {
                         "description": "Enable pretty-printing for gdb",
                         "text": "-enable-pretty-printing",
                         "ignoreFailures": true
@@ -221,6 +229,7 @@
             "id": "PX4_GZ_MODEL",
             "description": "GZ vehicle model",
             "options": [
+              "heligyro",
               "x500",
               "x500_depth",
               "x500_lidar",

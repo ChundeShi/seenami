@@ -34,6 +34,7 @@ parameters:
                 13: Rover (Mecanum)
                 14: Spacecraft 2D
                 15: Spacecraft 3D
+                196: Heligyro VTOL
             default: 14
 
         CA_METHOD:

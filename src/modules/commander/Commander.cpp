@@ -1738,6 +1738,7 @@ void Commander::updateParameters()
 
 	_vehicle_status.is_vtol = is_vtol(_vehicle_status);
 	_vehicle_status.is_vtol_tailsitter = is_vtol_tailsitter(_vehicle_status);
+	_vehicle_status.is_vtol_heligyro = is_vtol_heligyro(_vehicle_status);
 
 	// _mode_switch_mapped = (RC_MAP_FLTMODE > 0)
 	if (_param_rc_map_fltmode != PARAM_INVALID && (param_get(_param_rc_map_fltmode, &value_int32) == PX4_OK)) {

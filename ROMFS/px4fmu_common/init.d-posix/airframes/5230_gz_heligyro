@@ -1,0 +1,205 @@
+#!/bin/sh
+#
+# @name Heligyro
+#
+# @type MC Neural Network
+#
+# Heligyro airframe configuration
+# 5-rotor 6DOF aircraft with simultaneous fixed-wing and rotary capability
+# Rotor layout:
+#   - Rotor 0: Top vertical (lift, non-reversible)
+#   - Rotor 1: Lower-right-front (CCW, forward/right)
+#   - Rotor 2: Upper-left-front (CCW, forward/left)
+#   - Rotor 3: Lower-left-front (CW, backward/left)
+#   - Rotor 4: Upper-right-front (CW, backward/right)
+#
+# Coordinate system: X forward, Y right, Z down (NED)
+# Rotor axes: (AX,AY,AZ) unit vector of thrust direction
+# Rotor positions: (PX,PY,PZ) meters from CG
+# Rotor 0: upward thrust (0,0,-1), non-reversible, vertical lift
+# Rotors 1-4: forward thrust (1,0,0), reversible, forward/backward thrust
+# Roll control: differential torque between CCW rotors (1,2) and CW rotors (3,4)
+# Yaw control: differential thrust between left/right rotor pairs
+# Pitch control: differential thrust between upper/lower rotor pairs
+# Lateral control: thrust differential between left/right sides
+# Reverse thrust: reversible rotors 1-4 with efficiency ratios (HG_RV_THR_CT_RAT, HG_RV_THR_KM_RAT)
+# Autorotation: rotor 0 enters autorotation above HG_AUTOROT_THR airspeed
+
+# Flight modes:
+# - Hover: Standard multicopter control (quadrotor-like)
+# - Forward: Differential thrust from front rotors (fixed-wing-like)
+# - Yaw: Differential CCW/CW thrust (quadrotor yaw trick)
+# - Pitch: Differential front rotor thrust (fixed-wing-like)
+# - Roll: Differential front rotor thrust (quadrotor yaw trick)
+#
+# Airframe parameters override heligyro_params.c defaults
+# Airframe takes precedence over all parameter files
+
+
+. ${R}etc/init.d/rc.vtol_defaults
+
+PX4_SIMULATOR=${PX4_SIMULATOR:=gz}
+PX4_GZ_WORLD=${PX4_GZ_WORLD:=default}
+PX4_SIM_MODEL=${PX4_SIM_MODEL:=heligyro}
+
+#set MAV_TYPE 2  # Rotary-wing
+set MAV_TYPE 196  # Heligyro
+set SYS_AUTOSTART 5230
+set PARAM_FILE ${PX4_PARAM_FILE:=/etc/px4/default.parm}
+set ROS2_NAMESPACE /px4
+set GZ_VERSION harmonic  # Explicitly set Harmonic for PX4
+
+param set-default SIM_GZ_EN 1 # Gazebo bridge
+param set-default CA_R_REV 30 #11110 reversible
+
+param set-default SENS_EN_ARSPDSIM 1  # Enable simulated airspeed sensor
+
+# NOTE: Actuator failure detection enabled for human flight safety
+# Motor failure detection active with 500ms timeout
+param set-default FD_ACT_EN 1  # Actuator failure detection enable (1=enabled for human flight safety)
+param set-default FD_ACT_MOT_TOUT 500  # Motor timeout for failure detection (ms)
+param set-default FD_FAIL_R 30.0  # Maximum allowed roll angle (degrees) before failure detection (reduced for human safety)
+param set-default FD_FAIL_P 30.0  # Maximum allowed pitch angle (degrees) (reduced for human safety)
+param set-default FD_FAIL_R_TTRI 0.3  # Time to trigger roll failure (seconds) (reduced for quicker detection)
+param set-default FD_FAIL_P_TTRI 0.3  # Time to trigger pitch failure (seconds) (reduced for quicker detection)
+
+param set-default CA_AIRFRAME 196  # HELIGYRO_VTOL - required for ActuatorEffectivenessHeligyroVTOL
+
+# Logging configuration
+param set-default SDLOG_MODE 1  # SD log mode: 1=when armed
+param set-default SDLOG_PROFILE 1  # SD log profile: 1=default
+param set-default SDLOG_DIRS_MAX 10  # Maximum log directories to keep
+
+param set-default CA_ROTOR_COUNT 5  # Number of rotors: 5 for Heligyro
+param set-default CA_ROTOR0_PX 0  # Rotor 0 (top) X position (meters from CG), forward
+param set-default CA_ROTOR0_PY 0  # Rotor 0 Y position (meters from CG), right
+param set-default CA_ROTOR0_PZ 0.6  # Rotor 0 Z position (meters from CG), down
+param set-default CA_ROTOR0_CT  0.015 # Rotor 0 thrust coefficient (N/(rad/s)^2) - matches SDF motorConstant
+param set-default CA_ROTOR0_KM -0.07525  # Rotor 0 torque coefficient (Nm/(rad/s)^2), negative for CW rotation - matches SDF momentConstant
+param set-default CA_ROTOR0_AX 0  # Rotor 0 thrust axis X component (0=no forward thrust)
+param set-default CA_ROTOR0_AY 0  # Rotor 0 thrust axis Y component (0=no lateral thrust)
+param set-default CA_ROTOR0_AZ -1  # Rotor 0 thrust axis Z component (-1=upward thrust)
+
+param set-default CA_SV_CS_COUNT 0  # No control surfaces (pure differential thrust)
+
+param set-default CA_ROTOR1_PX 0.1  # Rotor 1 (lower-right-front) X position (meters from CG), forward
+param set-default CA_ROTOR1_PY -0.56  # Rotor 1 (lower-right-front) Y position (meters from CG), right
+param set-default CA_ROTOR1_PZ -0.3  # Rotor 1 (lower-right-front) Z position (meters from CG), down
+param set-default CA_ROTOR1_CT  0.007386  # Rotor 1 (lower-right-front) thrust coefficient (N/(rad/s)^2) - matches SDF motorConstant
+#param set-default CA_ROTOR1_CT 0.007386  # BALANCED to match top rotor (was 2e-05)
+param set-default CA_ROTOR1_KM  0.06      # Rotor 1 (lower-right-front) torque coefficient (original ±0.06), positive for CCW rotation - matches SDF momentConstant
+param set-default CA_ROTOR1_AX 1  # Rotor 1 (lower-right-front) thrust axis X component (1=forward thrust)
+param set-default CA_ROTOR1_AY 0  # Rotor 1 (lower-right-front) thrust axis Y component (0=no lateral thrust)
+param set-default CA_ROTOR1_AZ 0  # Rotor 1 (lower-right-front) thrust axis Z component (0=no vertical thrust)
+
+param set-default CA_ROTOR2_PX 0.1  # Rotor 2 (upper-left-front) X position (meters from CG), forward
+param set-default CA_ROTOR2_PY 0.56  # Rotor 2 (upper-left-front) Y position (meters from CG), right
+param set-default CA_ROTOR2_PZ 0.3  # Rotor 2 (upper-left-front) Z position (meters from CG), down
+param set-default CA_ROTOR2_CT  0.007386  # Rotor 2 (upper-left-front) thrust coefficient (N/(rad/s)^2) - matches SDF motorConstant
+param set-default CA_ROTOR2_KM  0.06      # Rotor 2 (upper-left-front) torque coefficient (original ±0.06), positive for CCW rotation - matches SDF momentConstant
+param set-default CA_ROTOR2_AX 1  # Rotor 2 (upper-left-front) thrust axis X component (1=forward thrust)
+param set-default CA_ROTOR2_AY 0  # Rotor 2 (upper-left-front) thrust axis Y component (0=no lateral thrust)
+param set-default CA_ROTOR2_AZ 0  # Rotor 2 (upper-left-front) thrust axis Z component (0=no vertical thrust)
+
+param set-default CA_ROTOR3_PX 0.1  # Rotor 3 (lower-left-front) X position (meters from CG), forward
+param set-default CA_ROTOR3_PY 0.56  # Rotor 3 (lower-left-front) Y position (meters from CG), right
+param set-default CA_ROTOR3_PZ -0.3  # Rotor 3 (lower-left-front) Z position (meters from CG), down
+param set-default CA_ROTOR3_CT  0.007386  # Rotor 3 (lower-left-front) thrust coefficient (N/(rad/s)^2) - matches SDF motorConstant
+param set-default CA_ROTOR3_KM  -0.06      # Rotor 3 (lower-left-front) torque coefficient (original ±0.06), negative for CW rotation - matches SDF momentConstant
+param set-default CA_ROTOR3_AX 1  # Rotor 3 (lower-left-front) thrust axis X component (1=forward thrust)
+param set-default CA_ROTOR3_AY 0  # Rotor 3 (lower-left-front) thrust axis Y component (0=no lateral thrust)
+param set-default CA_ROTOR3_AZ 0  # Rotor 3 (lower-left-front) thrust axis Z component (0=no vertical thrust)
+
+param set-default CA_ROTOR4_PX 0.1  # Rotor 4 (upper-right-front) X position (meters from CG), forward
+param set-default CA_ROTOR4_PY -0.56  # Rotor 4 (upper-right-front) Y position (meters from CG), right
+param set-default CA_ROTOR4_PZ 0.3  # Rotor 4 (upper-right-front) Z position (meters from CG), down
+param set-default CA_ROTOR4_CT  0.007386  # Rotor 4 (upper-right-front) thrust coefficient (N/(rad/s)^2) - matches SDF motorConstant
+param set-default CA_ROTOR4_KM  -0.06      # Rotor 4 (upper-right-front) torque coefficient (original ±0.06), negative for CW rotation - matches SDF momentConstant
+param set-default CA_ROTOR4_AX 1  # Rotor 4 (upper-right-front) thrust axis X component (1=forward thrust)
+param set-default CA_ROTOR4_AY 0  # Rotor 4 (upper-right-front) thrust axis Y component (0=no lateral thrust)
+param set-default CA_ROTOR4_AZ 0  # Rotor 4 (upper-right-front) thrust axis Z component (0=no vertical thrust)
+
+# Add reverse thrust ratios for all forward rotors
+param set-default HG_RV_THR_CT_RAT 0.8  # Rotor 1-4 reverse thrust efficiency
+param set-default HG_RV_THR_KM_RAT 0.95  # Rotor 1-4 reverse torque efficiency
+
+# Yaw compensation parameters for Heligyro
+param set-default CA_HELI_YAW_CCW 0           # Main rotor turns clockwise (CW)
+param set-default CA_HELI_YAW_TH_S 0.0       # Yaw compensation scale from throttle (INCREASED for stability)
+param set-default CA_HELI_YAW_CP_S 0.0       # Yaw compensation scale from collective pitch (INCREASED for stability)
+param set-default CA_HELI_YAW_CP_O 0.0        # Yaw compensation offset
+param set-default HG_YAW_FF_RPM 0.0          # Yaw rate feedforward from rotor speed (INCREASED 10x)
+
+# Main rotor torque constant for yaw compensation
+param set-default HG_MAIN_TORQUE 1e-6  # Main rotor torque constant for yaw compensation
+
+# Roll and pitch compensation parameters
+param set-default HG_ROLL_TORQUE 0.5     # Roll torque effectiveness
+param set-default HG_ROLL_COMP_FWD 0.0       # Roll compensation in forward flight
+
+# Throttle curve points for collective pitch mapping (5 points)
+param set-default CA_HELI_THR_C0 0.0    # Minimum throttle
+param set-default CA_HELI_THR_C1 0.25   # Low throttle
+param set-default CA_HELI_THR_C2 0.5    # Mid throttle
+param set-default CA_HELI_THR_C3 0.75   # High throttle
+param set-default CA_HELI_THR_C4 1.0    # Maximum throttle
+
+# Lateral thrust differential control parameters
+param set-default HG_LAT_GAIN 0.3      # Lateral thrust gain (0.5-1.5)
+param set-default HG_LAT_MAX 0.2       # Maximum lateral thrust (0.2-0.6)
+param set-default HG_LAT_DAMP 0.1      # Lateral damping (0.1-0.5)
+param set-default HG_LAT_YAW_RAT 0.1   # Lateral to yaw coupling ratio
+
+# Autorotation threshold (shortened name to fit 16-char limit)
+param set-default HG_AUTOROT_THR 6.0  # Airspeed threshold (m/s) for rotor 0 autorotation (increased for stability)
+
+# Heligyro mode thrust parameters (replace magic numbers)
+param set-default HG_FW_R0_THR 0.2      # Rotor 0 thrust scaling in FW mode (20% of MC) - increased for stability
+param set-default HG_AUTOGLIDE_THR 0.05 # Thrust in autoglide mode (minimal)
+param set-default HG_EMERG_THR 0.3      # Thrust in emergency mode (gentle descent)
+
+
+param set-default SIM_GZ_EC_FUNC1 101  # Gazebo effector channel [1-5] function mapping
+param set-default SIM_GZ_EC_FUNC2 102  # Gazebo effector channel [1-5] function mapping
+param set-default SIM_GZ_EC_FUNC3 103  # Gazebo effector channel [1-5] function mapping
+param set-default SIM_GZ_EC_FUNC4 104  # Gazebo effector channel [1-5] function mapping
+param set-default SIM_GZ_EC_FUNC5 105  # Gazebo effector channel [1-5] function mapping
+
+# Add to 5230_gz_heligyro (ROMFS/px4fmu_common/init.d-posix/airframes/5230_gz_heligyro)
+param set-default SIM_GZ_EC_MIN2 -1300.0  # Gazebo effector channel [1-5] minimum PWM value
+param set-default SIM_GZ_EC_MIN3 -1300.0  # Front rotor 2
+param set-default SIM_GZ_EC_MIN4 -1300.0  # Front rotor 3
+param set-default SIM_GZ_EC_MIN5 -1300.0  # Front rotor 4
+param set-default SIM_GZ_EC_MIN1 10.0      # Lift rotor (no reverse)
+
+param set-default SIM_GZ_EC_MAX1 200  # Gazebo effector channel [1-5] maximum PWM value
+param set-default SIM_GZ_EC_MAX2 1300  # Gazebo effector channel [1-5] maximum PWM value
+param set-default SIM_GZ_EC_MAX3 1300  # Gazebo effector channel [1-5] maximum PWM value
+param set-default SIM_GZ_EC_MAX4 1300  # Gazebo effector channel [1-5] maximum PWM value
+param set-default SIM_GZ_EC_MAX5 1300  # Gazebo effector channel [1-5] maximum PWM value
+
+# RC input mode: 4 = disabled (autonomous mode - no RC required for SITL)
+# This fixes "No manual control input" error in QGC
+param set-default COM_RC_IN_MODE 1
+
+param set-default NPFG_PERIOD 12
+param set-default MC_AIRMODE 1  # Multicopter airmode: 1=enabled
+
+param set-default MIS_TAKEOFF_ALT 10
+
+param set-default NAV_ACC_RAD 5
+param set-default NAV_DLL_ACT 2
+
+param set-default FD_ESCS_EN 0
+
+param set-default HG_LAT_GAIN 0.3       # Reduced lateral gain (default 0.8)
+param set-default HG_LAT_MAX 0.2        # Reduced lateral max (default 0.4)
+param set-default HG_ROLL_TORQUE 0.05   # Reduced roll torque (default 0.1)
+param set-default HG_FW_R0_THR 0.3      # Increased forward flight rotor 0 thrust (default 0.1)
+
+
+# CRITICAL: Enable simulated sensors
+param set-default SENS_EN_GPSSIM 1          # Simulated GPS
+param set-default SENS_EN_BAROSIM 1         # Simulated barometer
+param set-default SENS_EN_MAGSIM 1          # Simulated magnetometer
+param set-default SENS_EN_ARSPDSIM 1        # Simulated airspeed

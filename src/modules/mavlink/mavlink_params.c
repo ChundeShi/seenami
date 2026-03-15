@@ -95,6 +95,7 @@ PARAM_DEFINE_INT32(MAV_SIK_RADIO_ID, 0);
  * @value 21 VTOL Tiltrotor
  * @value 22 VTOL Standard (separate fixed rotors for hover and cruise flight)
  * @value 23 VTOL Tailsitter
+ * @value 196 VTOL Heligyro
  * @group MAVLink
  */
 PARAM_DEFINE_INT32(MAV_TYPE, 0);

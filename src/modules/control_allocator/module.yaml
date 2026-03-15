@@ -33,6 +33,7 @@ parameters:
                 13: Rover (Mecanum)
                 14: Spacecraft 2D
                 15: Spacecraft 3D
+                196: Heligyro VTOL
             default: 0
 
         CA_METHOD:
@@ -69,6 +70,38 @@ parameters:
                 10: Motor 11
                 11: Motor 12
             default: 0
+
+        # Global Reverse Rotor Ratio Parameters
+        HG_RV_THR_CT_RAT:
+            description:
+                short: Global reverse thrust coefficient ratio
+                long: |
+                  Global ratio of reverse rotation thrust coefficient (CT) to normal rotation CT for all reversible rotors.
+                  reverse_CT = normal_CT * CA_RTR_CT_REV_RAT.
+                  Use values <1 if reverse thrust is less efficient (typical for propellers).
+                  Applies only to motors where CA_R_REV enables reversibility.
+            type: float
+            decimal: 3
+            increment: 0.01
+            min: 0.0
+            max: 2.0
+            default: 0.9  # Typical real-world value (reverse is ~90% efficient)
+            advanced: true
+        HG_RV_THR_KM_RAT:
+            description:
+                short: Global reverse moment coefficient ratio
+                long: |
+                  Global ratio of reverse rotation moment coefficient (KM) to normal rotation KM for all reversible rotors.
+                  reverse_KM = -1 * normal_KM * CA_RTR_KM_REV_RAT (sign is inverted for reverse rotation).
+                  Accounts for asymmetric torque in reverse.
+                  Applies only to motors where CA_R_REV enables reversibility.
+            type: float
+            decimal: 3
+            increment: 0.01
+            min: 0.0
+            max: 2.0
+            default: 0.95  # Typical real-world value (reverse is ~95% efficient)
+            advanced: true
         CA_R${i}_SLEW:
             description:
                 short: Motor ${i} slew rate limit
@@ -453,13 +486,19 @@ parameters:
                 short: Throttle curve at position ${i}
                 long: |
                   Defines the output throttle at the interval position ${i}.
+                  Critical: Later values must be ≥ earlier values (0 ≤ C0 ≤ C1 ≤ C2 ≤ C3 ≤ C4 ≤ 1).
             type: float
             decimal: 3
             increment: 0.1
             num_instances: 5
             min: 0
             max: 1
-            default: [1, 1, 1, 1, 1]
+            default: [0.2, 0.4, 0.6, 0.6, 1.0]
+            validation:
+                short: 'Later values must be ≥ earlier values (0–1)'
+                long: |
+                  Thrust curve points must increase monotonically (each subsequent value ≥ previous).
+                  Valid range: 0.0 ≤ CA_HELI_THR_C0 ≤ CA_HELI_THR_C1 ≤ CA_HELI_THR_C2 ≤ CA_HELI_THR_C3 ≤ CA_HELI_THR_C4 ≤ 1.0
         CA_HELI_PITCH_C${i}:
             description:
                 short: Collective pitch curve at position ${i}
@@ -579,6 +618,296 @@ parameters:
           max: 75
           default: 0.0
 
+ # Heligyro VTOL Specific Parameters
+        HG_MAIN_TORQUE:
+            category: Control Allocation
+            type: float
+            default: 0.001
+            min: 0.0
+            max: 0.01
+            description:
+                short: Main rotor torque scaling factor for yaw compensation
+                long: |
+                    Heligyro-specific parameter for yaw compensation calculation.
+                    Scales the main rotor torque (RPM² * this factor) used for yaw compensation.
+                    Unit: Nm/(RPM²) - scaling factor converting RPM² to torque.
+            group: Heligyro
+        HG_YAW_FF_RPM:
+            category: Control Allocation
+            type: float
+            default: 0.005
+            min: 0.0
+            max: 0.1
+            description:
+                short: Yaw rate feedforward gain (rotor speed dependent)
+                long: |
+                    Heligyro-specific parameter for yaw rate feedforward from rotor speed.
+                    Scales the yaw compensation based on main rotor RPM.
+            group: Heligyro
+
+        HG_ROLL_COMP_FWD:
+            category: Control Allocation
+            type: float
+            default: 0.1
+            min: 0.0
+            max: 0.5
+            description:
+                short: Roll compensation gain for forward/backward flight
+                long: |
+                    Heligyro-specific parameter for roll compensation during forward/backward flight.
+                    Adjusts roll control authority based on flight direction.
+            group: Heligyro
+        HG_AUTOROT_THR:
+            category: Control Allocation
+            type: float
+            default: -1.0
+            min: -1.0
+            max: 10.0
+            unit: m/s
+            description:
+                short: Override for autorotation airspeed threshold
+                long: |
+                    Heligyro-specific parameter to override the default autorotation threshold.
+                    Set to -1 to use HG_AUTOROT_THR, or specify a custom value in m/s.
+            group: Heligyro
+
+        # Additional Heligyro parameters referenced in code
+        HG_HELI_DEG_LIFT:
+            category: Control Allocation
+            type: float
+            default: 0.8
+            min: 0.0
+            max: 1.0
+            description:
+                short: Degraded rotor lift scale factor
+                long: |
+                    Heligyro-specific parameter for degraded rotor mode.
+                    Scales lift capability when one or more rotors are degraded/failed.
+            group: Heligyro
+        PITCH_COMP_FWD:
+            category: Control Allocation
+            type: float
+            default: 0.5
+            min: 0.0
+            max: 1.0
+            description:
+                short: Pitch compensation gain for forward flight
+                long: |
+                    Heligyro-specific parameter for pitch compensation during forward flight.
+                    Adjusts pitch control authority based on flight direction.
+            group: Heligyro
+        HG_ROLL_TORQUE:
+            category: Control Allocation
+            type: float
+            default: 0.1
+            min: 0.0
+            max: 1.0
+            description:
+                short: Roll torque effectiveness
+                long: |
+                    Heligyro-specific parameter for roll torque effectiveness.
+                    Scales the roll control authority of front rotors.
+            group: Heligyro
+        HG_LAT_GAIN:
+            category: Control Allocation
+            type: float
+            default: 0.8
+            min: 0.5
+            max: 1.5
+            description:
+                short: Lateral thrust differential gain
+                long: |
+                    Heligyro-specific parameter for lateral thrust differential control.
+                    Higher values provide more aggressive lateral response.
+            group: Heligyro
+        HG_LAT_MAX:
+            category: Control Allocation
+            type: float
+            default: 0.4
+            min: 0.2
+            max: 0.6
+            description:
+                short: Maximum lateral thrust differential
+                long: |
+                    Heligyro-specific parameter for maximum lateral thrust differential.
+                    Limits the maximum thrust difference between left and right rotors.
+            group: Heligyro
+        HG_LAT_DAMP:
+            category: Control Allocation
+            type: float
+            default: 0.2
+            min: 0.1
+            max: 0.5
+            description:
+                short: Lateral damping coefficient
+                long: |
+                    Heligyro-specific parameter for lateral damping.
+                    Provides damping to prevent lateral oscillations.
+            group: Heligyro
+        HG_LAT_YAW_RAT:
+            category: Control Allocation
+            type: float
+            default: 0.3
+            min: 0.0
+            max: 1.0
+            description:
+                short: Lateral to yaw coupling ratio
+                long: |
+                    Heligyro-specific parameter for lateral to yaw coupling ratio.
+            group: Heligyro
+
+        # Enhanced lateral control parameters (Phase 1 implementation)
+        HG_LAT_MODE:
+            category: Control Allocation
+            type: int32
+            default: 0
+            min: 0
+            max: 2
+            description:
+                short: Lateral control mode selection
+                long: |
+                    0 = Simple differential (current default, stable)
+                    1 = Oscillation pattern (zig-zag, experimental)
+                    2 = Adaptive (hybrid, switches based on command magnitude)
+            group: Heligyro
+
+        HG_LAT_RATE_LIM:
+            category: Control Allocation
+            type: float
+            default: 2.0
+            min: 0.5
+            max: 10.0
+            unit: 1/s
+            description:
+                short: Lateral control rate limit
+                long: |
+                    Maximum rate of change for lateral thrust differential.
+                    Prevents abrupt lateral movements and improves stability.
+                    Lower values = smoother but slower response.
+            group: Heligyro
+
+        HG_LAT_DEADZONE:
+            category: Control Allocation
+            type: float
+            default: 0.05
+            min: 0.0
+            max: 0.2
+            description:
+                short: Lateral command deadzone
+                long: |
+                    Ignore lateral commands below this threshold.
+                    Prevents control jitter from small inputs.
+            group: Heligyro
+
+        HG_LAT_FF:
+            category: Control Allocation
+            type: float
+            default: 0.15
+            min: 0.0
+            max: 0.5
+            description:
+                short: Lateral feedforward gain
+                long: |
+                    Feedforward compensation for lateral momentum.
+                    Improves response time for sustained lateral commands.
+            group: Heligyro
+
+        # Roll control gain scheduling parameters (Phase 1 implementation)
+        HG_ROLL_HOVER:
+            category: Control Allocation
+            type: float
+            default: 0.1
+            min: 0.0
+            max: 0.5
+            description:
+                short: Roll torque effectiveness in hover
+                long: |
+                    Roll control gain for hover mode (low airspeed).
+                    Higher values = more aggressive roll response.
+            group: Heligyro
+
+        HG_ROLL_FWD:
+            category: Control Allocation
+            type: float
+            default: 0.05
+            min: 0.0
+            max: 0.3
+            description:
+                short: Roll torque effectiveness in forward flight
+                long: |
+                    Roll control gain for forward flight (high airspeed).
+                    Typically lower than hover due to aerodynamic damping.
+            group: Heligyro
+
+        HG_ROLL_TR_SPD:
+            category: Control Allocation
+            type: float
+            default: 8.0
+            min: 2.0
+            max: 20.0
+            unit: m/s
+            description:
+                short: Airspeed for roll gain transition
+                long: |
+                    Airspeed at which roll gain transitions from hover to forward flight value.
+                    Below this speed: use HG_ROLL_HOVER
+                    Above this speed: interpolate towards HG_ROLL_FWD
+            group: Heligyro
+
+        HG_ROLL_YAW_DCP:
+            category: Control Allocation
+            type: float
+            default: 0.1
+            min: 0.0
+            max: 0.5
+            description:
+                short: Roll-yaw decoupling gain
+                long: |
+                    Compensation factor to reduce yaw coupling from roll commands.
+                    Higher values = more yaw correction during roll maneuvers.
+            group: Heligyro
+
+        # Heligyro mode thrust parameters (replace magic numbers)
+        HG_FW_R0_THR:
+            category: Control Allocation
+            type: float
+            default: 0.1
+            min: 0.0
+            max: 1.0
+            description:
+                short: Rotor 0 thrust scaling in FW mode
+                long: |
+                    Scaling factor for rotor 0 thrust in fixed-wing mode.
+                    Used to maintain autorotation while minimizing drag.
+                    Value of 0.1 means 10% of MC vertical thrust command.
+            group: Heligyro
+
+        HG_AUTOGLIDE_THR:
+            category: Control Allocation
+            type: float
+            default: 0.05
+            min: 0.0
+            max: 0.5
+            description:
+                short: Thrust in autoglide mode
+                long: |
+                    Minimal thrust to maintain rotor speed during passive autogyration.
+                    Should be just enough to prevent rotor stall.
+            group: Heligyro
+
+        HG_EMERG_THR:
+            category: Control Allocation
+            type: float
+            default: 0.3
+            min: 0.0
+            max: 1.0
+            description:
+                short: Thrust in emergency mode
+                long: |
+                    Gentle descent thrust for emergency mode.
+                    Provides controlled descent when in unrecoverable fault state.
+            group: Heligyro
+
         # Others
         CA_FAILURE_MODE:
             description:
@@ -610,6 +939,12 @@ mixer:
               - name: 'CA_R${i}_SLEW'
                 label: 'Slew Rate'
                 index_offset: 0
+                advanced: true
+              - name: 'HG_RV_THR_CT_RAT'
+                label: 'Reverse Thrust Ratio'
+                advanced: true
+              - name: 'HG_RV_THR_KM_RAT'
+                label: 'Reverse Moment Ratio'
                 advanced: true
         servo:
             functions: 'Servo'
@@ -794,8 +1129,14 @@ mixer:
                             label: 'Axis Z'
                             function: 'axisz'
                             advanced: true
-
-            1: # Fixed Wing
+                          - name: 'HG_RV_THR_CT_RAT'
+                            label: 'Reverse Thrust Ratio'
+                            advanced: true
+                          - name: 'HG_RV_THR_KM_RAT'
+                            label: 'Reverse Moment Ratio'
+                            advanced: true
+            
+                1: # Fixed Wing
                 title: 'Fixed Wing'
                 actuators:
                   - actuator_type: 'motor'
@@ -1205,3 +1546,46 @@ mixer:
                         position: [ -1, 1, 0 ]
                       - name: 'Left Motor Back'
                         position: [ -1, -1, 0 ]
+
+            # Add Heligyro VTOL Config (196)
+            196: # Heligyro VTOL
+                title: 'Heligyro VTOL'
+                actuators:
+                  - actuator_type: 'motor'
+                    group_label: 'Main Rotor + Front Reversible Rotors'
+                    count: 'CA_ROTOR_COUNT'
+                    per_item_parameters:
+                        standard:
+                            position: [ 'CA_ROTOR${i}_PX', 'CA_ROTOR${i}_PY', 'CA_ROTOR${i}_PZ' ]
+                        extra:
+                          - name: 'CA_R_REV'
+                            label: 'Bidirectional (Front 4 Rotors)'
+                            show_as: 'bitset'
+                            index_offset: 0
+                            advanced: true
+                          - name: 'CA_ROTOR${i}_KM'
+                            label: 'Direction CCW'
+                            function: 'spin-dir'
+                            show_as: 'true-if-positive'
+                          # Global Reverse Ratio Parameters
+                          - name: 'HG_RV_THR_CT_RAT'
+                            label: 'Reverse Thrust Ratio'
+                            advanced: true
+                          - name: 'HG_RV_THR_KM_RAT'
+                            label: 'Reverse Moment Ratio'
+                            advanced: true
+                          - name: 'CA_HELI_THR_C${i}'
+                            label: 'Thrust Curve Points'
+                            function: 'throttle-curve'
+                            show_as: 'number-input'
+                            advanced: true
+                          # Heligyro-Specific Params
+                          - name: 'HG_MAIN_TORQUE'
+                            label: 'Main Rotor Torque Scaling'
+                            advanced: true
+                          - name: 'HG_YAW_FF_RPM'
+                            label: 'Yaw Rate Feedforward (RPM)'
+                            advanced: true
+                          - name: 'HG_ROLL_COMP_FWD'
+                            label: 'Roll Compensation (Forward Flight)'
+                            advanced: true

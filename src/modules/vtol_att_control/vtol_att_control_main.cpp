@@ -73,6 +73,9 @@ VtolAttitudeControl::VtolAttitudeControl() :
 	} else if (static_cast<vtol_type>(_param_vt_type.get()) == vtol_type::STANDARD) {
 		_vtol_type = new Standard(this);
 
+	} else if (static_cast<vtol_type>(_param_vt_type.get()) == vtol_type::HELIGYRO) {
+		_vtol_type = new Heligyro(this);
+
 	} else {
 		exit_and_cleanup();
 	}
@@ -340,6 +343,11 @@ VtolAttitudeControl::Run()
 	case mode::FIXED_WING:
 		should_run = updated_fw_in;
 		break;
+	}
+
+	// Heligyro needs both MC and FW inputs in ROTARY_WING mode for 6DOF control
+	if (static_cast<vtol_type>(_param_vt_type.get()) == vtol_type::HELIGYRO) {
+		should_run = should_run || updated_fw_in;
 	}
 
 	if (should_run) {
