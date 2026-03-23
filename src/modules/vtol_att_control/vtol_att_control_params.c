@@ -40,13 +40,14 @@
  */
 
 /**
- * VTOL Type (Tailsitter=0, Tiltrotor=1, Standard=2)
+ * VTOL Type (Tailsitter=0, Tiltrotor=1, Standard=2, Heligyro=3)
  *
  * @value 0 Tailsitter
  * @value 1 Tiltrotor
  * @value 2 Standard
+	 * @value 3 Heligyro
  * @min 0
- * @max 2
+ * @max 3
  * @reboot_required true
  * @group VTOL Attitude Control
  */
@@ -69,7 +70,7 @@ PARAM_DEFINE_INT32(VT_ELEV_MC_LOCK, 1);
  *
  * @unit s
  * @min 0.1
- * @max 20.00
+ * @max 30.00
  * @increment 1
  * @decimal 2
  * @group VTOL Attitude Control
@@ -83,7 +84,7 @@ PARAM_DEFINE_FLOAT(VT_F_TRANS_DUR, 5.0f);
  *
  * @unit s
  * @min 0.1
- * @max 20.00
+ * @max 30.00
  * @increment 1
  * @decimal 2
  * @group VTOL Attitude Control
@@ -165,7 +166,7 @@ PARAM_DEFINE_FLOAT(VT_TRANS_TIMEOUT, 15.0f);
  *
  * @unit s
  * @min 0.0
- * @max 20.0
+ * @max 30.0
  * @increment 0.1
  * @decimal 1
  * @group VTOL Attitude Control
@@ -181,7 +182,7 @@ PARAM_DEFINE_FLOAT(VT_TRANS_MIN_TM, 2.0f);
  *
  * @unit m
  * @min 0.0
- * @max 200.0
+ * @max 300.0
  * @increment 1
  * @decimal 1
  * @group VTOL Attitude Control
@@ -200,7 +201,7 @@ PARAM_DEFINE_FLOAT(VT_FW_MIN_ALT, 0.0f);
  *
  * @unit m
  * @min 0.0
- * @max 200.0
+ * @max 300.0
  * @increment 1
  * @decimal 1
  * @group VTOL Attitude Control
@@ -307,7 +308,7 @@ PARAM_DEFINE_INT32(VT_FW_DIFTHR_EN, 0);
  * Differential thrust in forward flight is enabled via VT_FW_DIFTHR_EN.
  *
  * @min 0.0
- * @max 2.0
+ * @max 3.0
  * @decimal 2
  * @increment 0.1
  * @group VTOL Attitude Control
@@ -320,7 +321,7 @@ PARAM_DEFINE_FLOAT(VT_FW_DIFTHR_S_R, 1.f);
  * Differential thrust in forward flight is enabled via VT_FW_DIFTHR_EN.
  *
  * @min 0.0
- * @max 2.0
+ * @max 3.0
  * @decimal 2
  * @increment 0.1
  * @group VTOL Attitude Control
@@ -333,7 +334,7 @@ PARAM_DEFINE_FLOAT(VT_FW_DIFTHR_S_P, 1.f);
  * Differential thrust in forward flight is enabled via VT_FW_DIFTHR_EN.
  *
  * @min 0.0
- * @max 2.0
+ * @max 3.0
  * @decimal 2
  * @increment 0.1
  * @group VTOL Attitude Control

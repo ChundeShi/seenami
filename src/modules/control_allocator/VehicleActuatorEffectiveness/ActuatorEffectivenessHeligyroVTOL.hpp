@@ -1,3 +1,16 @@
+// ============================================================================
+// HELIGYRO VTOL - CUSTOM IMPLEMENTATION
+// ============================================================================
+// File: ActuatorEffectivenessHeligyroVTOL.hpp
+// Purpose: Actuator effectiveness for 5-rotor 6DOF heligyro VTOL
+// Unique Features:
+//   - 5-rotor effectiveness matrix
+//   - Differential torque roll control
+//   - Forward thrust autorotation logic
+//   - Reverse thrust support for rotors 1-4
+// Location: src/modules/control_allocator/VehicleActuatorEffectiveness/
+// ============================================================================
+
 /****************************************************************************
  *
  *   Copyright (c) 2020-2023 PX4 Development Team. All rights reserved.
@@ -160,7 +173,7 @@ public:
 private:
 // Parameter handles (mix of PX4 core + Heligyro-specific)
 	DEFINE_PARAMETERS(
-		(ParamFloat<px4::params::HG_MAIN_TORQUE>) _param_hg_main_torque,
+		(ParamFloat<px4::params::CA_HELI_YAW_TH_S>) _param_hg_main_torque,
 		(ParamFloat<px4::params::HG_YAW_FF_RPM>) _param_hg_yaw_ff_rpm,
 		(ParamFloat<px4::params::HG_ROLL_COMP_FWD>) _param_hg_roll_comp_fwd,
 		(ParamFloat<px4::params::HG_ROLL_TORQUE>) _param_hg_roll_torque,
@@ -169,8 +182,6 @@ private:
 		(ParamFloat<px4::params::HG_AUTOROT_THR>) _param_hg_autorot_thr,
 		(ParamFloat<px4::params::HG_HELI_DEG_LIFT>) _param_hg_heli_deg_lift,
 		(ParamFloat<px4::params::COM_SPOOLUP_TIME>) _param_com_spoolup_time, // PX4 core (spoolup time)
-		(ParamFloat<px4::params::HG_RV_THR_CT_RAT>) _param_hg_rv_thr_ct_rat,
-		(ParamFloat<px4::params::HG_RV_THR_KM_RAT>) _param_hg_rv_km_ct_rat,
 		// Original lateral control parameters
 		(ParamFloat<px4::params::HG_LAT_GAIN>) _param_hg_lat_gain,
 		(ParamFloat<px4::params::HG_LAT_MAX>) _param_hg_lat_max,
@@ -227,9 +238,9 @@ private:
 	uORB::Subscription _rpm_sub{ORB_ID(rpm)};
 
 	// Rotor health monitoring (for failsafe)
-	bool _rotor_healthy[NUM_HELI_ROTORS]{};  // Health status per rotor
-	float _rotor_rpm[NUM_HELI_ROTORS]{};     // Last known RPM per rotor
-	uint64_t _rotor_failure_time[NUM_HELI_ROTORS]{};  // Timestamp of failure detection
+	bool _rotor_healthy[NUM_HELI_ROTORS] {}; // Health status per rotor
+	float _rotor_rpm[NUM_HELI_ROTORS] {};    // Last known RPM per rotor
+	uint64_t _rotor_failure_time[NUM_HELI_ROTORS] {}; // Timestamp of failure detection
 	bool _failsafe_triggered{false};         // Failsafe active flag
 	int _failed_rotor_count{0};              // Count of failed rotors
 

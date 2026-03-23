@@ -46,6 +46,8 @@
 #include <math.h>
 #include <float.h>
 
+#include <modules/commander/commander_helper.h>
+
 #include <lib/geo/geo.h>
 #include <systemlib/mavlink_log.h>
 #include <mathlib/mathlib.h>
@@ -665,6 +667,75 @@ MissionBlock::mission_item_to_position_setpoint(const mission_item_s &item, posi
 			// Don't set a yaw setpoint for takeoff, as Navigator doesn't handle the yaw reset.
 			// The yaw setpoint generation is handled by FlightTaskAuto.
 			sp->yaw = NAN;
+
+			// ============================================================================
+			// HELIGYRO TAKEOFF MODE SELECTION
+			// ============================================================================
+			// For heligyro airframes, select takeoff method based on control mode:
+			//
+			// AUTO mode (AUTO_TAKEOFF, AUTO_MISSION, AUTO_LOITER, etc.):
+			//   - Use mission item param1 (vertical_takeoff) and param2 (runway_takeoff)
+			//   - Default to vertical takeoff if no params specified
+			//
+			// MANUAL mode (MANUAL, STABILIZED, POSITION, etc.):
+			//   - Use RC stick inputs to select takeoff type
+			//   - Left stick throttle > 65%: vertical takeoff
+			//   - Right stick pitch > 65%: runway takeoff
+			//
+			// Independent flags encoded in sp->params[]:
+			//   params[0]: vertical_takeoff - Enable MC/vertical takeoff
+			//   params[1]: runway_takeoff - Enable FW/runway takeoff
+			//
+			// Combinations:
+			//   params[0]=1, params[1]=0: Vertical takeoff only (rotor 0 active)
+			//   params[0]=0, params[1]=1: Runway takeoff only (rotor 0 idle)
+			//   params[0]=1, params[1]=1: Hybrid runway takeoff (both active)
+			// ============================================================================
+
+			if (_mission_item.nav_cmd == NAV_CMD_VTOL_TAKEOFF &&
+			    is_vtol_heligyro(*_navigator->get_vstatus())) {
+
+				// Default: vertical takeoff enabled, runway takeoff disabled
+				float vertical_takeoff = 1.0f;
+				float runway_takeoff = 0.0f;
+
+				// Check if we're in a manual control mode
+				// Manual modes: MANUAL, STABILIZED, ACRO, RATTITUDE, POSITION, ALTCTL
+				// Auto modes: all others (AUTO_TAKEOFF, AUTO_MISSION, AUTO_LOITER, etc.)
+				bool manual_mode = (_navigator->get_vstatus()->nav_state == vehicle_status_s::NAVIGATION_STATE_MANUAL ||
+									    _navigator->get_vstatus()->nav_state == vehicle_status_s::NAVIGATION_STATE_STAB ||
+									    _navigator->get_vstatus()->nav_state == vehicle_status_s::NAVIGATION_STATE_ACRO ||
+									    _navigator->get_vstatus()->nav_state == vehicle_status_s::NAVIGATION_STATE_POSCTL ||
+									    _navigator->get_vstatus()->nav_state == vehicle_status_s::NAVIGATION_STATE_ALTCTL);
+				if (manual_mode) {
+					// MANUAL mode: Check RC/stick inputs
+					// Left stick throttle > 65%: vertical takeoff (MC)
+					// Right stick pitch > 65%: runway takeoff (FW)
+					manual_control_setpoint_s manual;
+					if (_manual_control_setpoint_sub.update(&manual)) {
+						vertical_takeoff = (manual.throttle > 0.65f) ? 1.0f : 0.0f;
+						runway_takeoff = (manual.pitch > 0.65f) ? 1.0f : 0.0f;
+					}
+
+				} else {
+					// AUTO mode: Use mission item params directly
+					// param1 (> 0.5): Enable vertical takeoff (MC rotor control)
+					// param2 (> 0.5): Enable runway takeoff (FW pitch/throttle)
+					// Default to vertical takeoff if both params are 0
+					vertical_takeoff = (_mission_item.params[0] > 0.5f) ? 1.0f : 0.0f;
+					runway_takeoff = (_mission_item.params[1] > 0.5f) ? 1.0f : 0.0f;
+
+					// If no takeoff mode specified in mission item, default to vertical
+					if (vertical_takeoff < 0.5f && runway_takeoff < 0.5f) {
+						vertical_takeoff = 1.0f;
+					}
+				}
+
+				// TODO: Pass takeoff flags to VTOL
+				// Note: position_setpoint_s doesn't have params field
+				// Need to implement alternative mechanism (custom uORB message or extend struct)
+				PX4_DEBUG("Heligyro takeoff: vertical=%.0f runway=%.0f", (double)vertical_takeoff, (double)runway_takeoff);
+			}
 		}
 
 		break;

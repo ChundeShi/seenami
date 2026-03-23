@@ -47,11 +47,13 @@
 #include <drivers/drv_hrt.h>
 #include <systemlib/mavlink_log.h>
 #include <uORB/Publication.hpp>
+#include <uORB/Subscription.hpp>
 #include <uORB/topics/mission.h>
 #include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/vehicle_command.h>
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/vtol_vehicle_status.h>
+#include <uORB/topics/manual_control_setpoint.h>
 
 // cosine of maximal course error to exit loiter if exit course is enforced (fixed-wing only)
 static constexpr float kCosineExitCourseThreshold = 0.99619f; // cos(5°)
@@ -231,6 +233,8 @@ protected:
 	// Mission items that have a timeout to allow the payload e.g. gripper, winch, gimbal executing the command see item_has_timeout()
 	hrt_abstime _timestamp_command_timeout{0}; ///< Timestamp when the current item_has_timeout() command was started
 	float _command_timeout{0.f}; ///< Time in seconds any item_has_timeout() command should be waited for before continuing the mission
+
+	uORB::Subscription _manual_control_setpoint_sub{ORB_ID(manual_control_setpoint)}; ///< Manual control for heligyro takeoff mode selection
 
 private:
 	void updateMaxHaglFailsafe();

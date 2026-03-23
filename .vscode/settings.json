@@ -138,4 +138,7 @@
                 "/opt/ros/humble/local/lib/python3.10/dist-packages"
         ],
         "ROS2.distro": "humble",
+        "[shellscript]": {
+                "editor.defaultFormatter": "bdq460.shell-formatter"
+        },
 }

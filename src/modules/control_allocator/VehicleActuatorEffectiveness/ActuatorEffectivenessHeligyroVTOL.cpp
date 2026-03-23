@@ -1,3 +1,15 @@
+// ============================================================================
+// HELIGYRO VTOL - CUSTOM IMPLEMENTATION
+// ============================================================================
+// File: ActuatorEffectivenessHeligyroVTOL.cpp
+// Purpose: Actuator effectiveness calculations for heligyro VTOL
+// Key Methods:
+//   - getEffectivenessMatrix(): 5-rotor 6DOF matrix computation
+//   - updateSetpoint(): Differential thrust mixing
+//   - computeRotor0Effectiveness(): Airspeed-based scaling
+// Location: src/modules/control_allocator/VehicleActuatorEffectiveness/
+// ============================================================================
+
 /****************************************************************************
  *
  *   Copyright (c) 2020-2023 PX4 Development Team. All rights reserved.
@@ -228,8 +240,6 @@ void ActuatorEffectivenessHeligyroVTOL::updateSetpoint(const matrix::Vector<floa
 	_rpm_control.setSpoolupProgress(spoolup_progress);
 	rpm_control_output = _rpm_control.getActuatorCorrection();
 
-	float hg_rv_km_ct_rat = _param_hg_rv_km_ct_rat.get();
-	float hg_rv_thr_ct_rat = _param_hg_rv_thr_ct_rat.get();
 
 	// UNIFIED FLIGHT MODE: all 5 rotors active for 6-DOF control
 	// Rotor 0: Upward facing (Z-axis thrust only) - physics-based auto-rotation
@@ -278,19 +288,12 @@ void ActuatorEffectivenessHeligyroVTOL::updateSetpoint(const matrix::Vector<floa
 		lateral_yaw_coupling = lateral_sp * _param_hg_lat_yaw_rat.get();
 	}
 
-	// Base forward/backward thrust with reverse thrust coefficients
+	// Base forward/backward thrust (standard control allocation handles reverse)
 	float rotor1_thrust = forward_sp;
 	float rotor2_thrust = forward_sp;
 	float rotor3_thrust = forward_sp;
 	float rotor4_thrust = forward_sp;
 
-	// Apply reverse thrust efficiency ratios for backward thrust
-	if (forward_sp < 0.0f) {
-		rotor1_thrust *= hg_rv_thr_ct_rat;
-		rotor2_thrust *= hg_rv_thr_ct_rat;
-		rotor3_thrust *= hg_rv_thr_ct_rat;
-		rotor4_thrust *= hg_rv_thr_ct_rat;
-	}
 
 	// Apply enhanced lateral control with rate limiting, deadzone, and feedforward
 	if (fabs(lateral_sp) > 0.01f) {
@@ -312,15 +315,6 @@ void ActuatorEffectivenessHeligyroVTOL::updateSetpoint(const matrix::Vector<floa
 			rotor4_thrust -= lateral_thrust;  // Right front upper (right) - note: lateral_thrust is negative
 			rotor2_thrust += lateral_thrust;  // Left front upper (left) - note: lateral_thrust is negative
 			rotor3_thrust += lateral_thrust;  // Left front lower (left) - note: lateral_thrust is negative
-		}
-
-		// Apply reverse thrust scaling for lateral control
-		if (forward_sp < 0.0f) {
-			float lateral_scale = hg_rv_km_ct_rat;
-			rotor1_thrust *= lateral_scale;
-			rotor2_thrust *= lateral_scale;
-			rotor3_thrust *= lateral_scale;
-			rotor4_thrust *= lateral_scale;
 		}
 	}
 

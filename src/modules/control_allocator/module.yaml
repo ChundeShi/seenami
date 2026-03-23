@@ -1,3 +1,15 @@
+# ============================================================================
+# HELIGYRO VTOL - CUSTOM IMPLEMENTATION
+# ============================================================================
+# File: module.yaml
+# Purpose: Control allocator parameters including heligyro-specific settings
+# Heligyro Parameters:
+#   - CA_AIRFRAME=196: Heligyro VTOL airframe type
+#   - CA_ROTOR_COUNT=5: 5-rotor configuration
+#   - HG_* parameters: Heligyro-specific tuning
+# Location: src/modules/control_allocator/
+# ============================================================================
+
 __max_num_mc_motors: &max_num_mc_motors 12
 __max_num_servos: &max_num_servos 8
 __max_num_tilts: &max_num_tilts 4
@@ -619,7 +631,7 @@ parameters:
           default: 0.0
 
  # Heligyro VTOL Specific Parameters
-        HG_MAIN_TORQUE:
+        CA_HELI_YAW_TH_S:
             category: Control Allocation
             type: float
             default: 0.001
@@ -1135,7 +1147,7 @@ mixer:
                           - name: 'HG_RV_THR_KM_RAT'
                             label: 'Reverse Moment Ratio'
                             advanced: true
-            
+
                 1: # Fixed Wing
                 title: 'Fixed Wing'
                 actuators:
@@ -1579,13 +1591,14 @@ mixer:
                             function: 'throttle-curve'
                             show_as: 'number-input'
                             advanced: true
+                    parameters:
                           # Heligyro-Specific Params
-                          - name: 'HG_MAIN_TORQUE'
-                            label: 'Main Rotor Torque Scaling'
+                          - label: 'Main Rotor Torque Scaling'
+                            name: 'CA_HELI_YAW_TH_S'
                             advanced: true
-                          - name: 'HG_YAW_FF_RPM'
-                            label: 'Yaw Rate Feedforward (RPM)'
+                          - label: 'Yaw Rate Feedforward (RPM)'
+                            name: 'HG_YAW_FF_RPM'
                             advanced: true
-                          - name: 'HG_ROLL_COMP_FWD'
-                            label: 'Roll Compensation (Forward Flight)'
+                          - label: 'Roll Compensation (Forward Flight)'
+                            name: 'HG_ROLL_COMP_FWD'
                             advanced: true
