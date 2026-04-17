@@ -129,4 +129,19 @@
         "yaml.schemas": {
                 "${workspaceFolder}/validation/module_schema.yaml": "${workspaceFolder}/src/modules/*/module.yaml"
         },
+        "python.autoComplete.extraPaths": [
+                "./drone_rl/bin/../lib/python3*/site-packages",
+                "./drone_rl/bin/../lib/python3*/site-packages",
+                "./drone_rl/bin/../lib/python3*/site-packages",
+                "/opt/ros/humble/lib/python3.10/site-packages",
+                "/opt/ros/humble/local/lib/python3.10/dist-packages"
+        ],
+        "python.analysis.extraPaths": [
+                "./drone_rl/bin/../lib/python3*/site-packages",
+                "./drone_rl/bin/../lib/python3*/site-packages",
+                "./drone_rl/bin/../lib/python3*/site-packages",
+                "/opt/ros/humble/lib/python3.10/site-packages",
+                "/opt/ros/humble/local/lib/python3.10/dist-packages"
+        ],
+        "ROS2.distro": "humble",
 }
